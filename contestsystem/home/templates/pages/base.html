@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel = "stylesheet" href = "{% static 'css/bootstrap.min.css' %}" type = "text/css"> 
+    <style>
+        html, body {
+            height: 100%;
+            background-color: #f6f6f6;
+        }
+    </style>
+    <title>{% block title %}{% endblock title %}</title>
+</head>
+<body>
+    <div class = "container-fluid"  style = "min-height: 95%">
+        <div class = "row">
+            <div class = "col-sm-2">
+                <center><img src = "{% static 'images/logo.png' %}" class = "responsive-img" style = "max-height: 150px"/></center>
+            </div>
+            <div class = "col-sm-8">
+                <h1 style = "text-align: center;">Online judge by Kamisama</h1>
+            </div>
+            <div class = "col-sm-2">
+                {% if user.username %}
+                    <h4 style = "color: blue">Hi, {{user.username}}</h4>
+                    <p><a href = "{%url 'logout'%}">Logout</a></p>
+                {% else %}
+                    You are not logged in! <br>
+                    Please <a href = "{% url 'login' %}">Login</a> or <a href = "{% url 'register' %}">Register</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class = "row" style = "flex: 1 1 auto;" >
+            <div class = "col-sm-2">
+                <div class = "bs-sliderbar" style = "background-color: #ffffff;">
+                    <ul class = "nav flex-column">
+                        <li><a href = "{% url 'home' %}">Home</a></li>
+                        <li><a href = "{% url 'problems' %}">Problems</a></li>
+                        <li><a href = "{% url 'submit' %}">Submit</a></li>
+                        <li><a href = "{% url 'submissions' %}">Submissions</a></li>
+                        <li><a href = "{% url 'standings' %}">Standings</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class = "col-sm-8">
+                {% block content %}
+                {% endblock content %}
+            </div>
+            <div class = "col-sm-2">
+                {% block problemDetails %}
+                {% endblock problemDetails %}
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class='container-fluid'>
+            © 2020 Kamisama
+        </div>
+    </footer>
+</body>
+</html>

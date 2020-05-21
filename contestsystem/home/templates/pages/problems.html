@@ -1,0 +1,36 @@
+{% extends 'pages/base.html' %}
+
+{% block title %}
+    {% if req_problem %}
+        {{req_problem.title}}
+    {% else %}
+        Problems
+    {% endif %}
+    
+{% endblock title %}
+{% block content %}
+    <!-- <center><h3>Contest has not started yet!</h3></center> -->    
+    {% if req_problem %}
+        <embed src="{{req_problem.statements.url}}" width = "100%" height = "530px"/>
+    {% else %}
+        {% for problem in problems %}
+            <h3> <a href = "problems/{{problem.title}}">{{problem.title}}</a> </h3>
+        {% endfor %}
+    {% endif %}
+{% endblock content %}
+
+{% block problemDetails %}
+    {% if req_problem %}
+        <strong>Problem code: </strong> {{req_problem.title}} <br>
+        <strong>Time limit: </strong> {{req_problem.time_limit}} ms <br>
+        <strong>Memory limit: </strong> {{req_problem.memory_limit}} MiB <br>
+        <strong>Download: </strong> <a href = "{{req_problem.statements.url}}"> Statement </a> <br>
+        <br> <br> 
+        <strong>Submit solution: </strong>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="file" name="myfile">
+            <button type="submit">Upload</button>
+        </form>
+    {% endif %}
+{% endblock problemDetails %}

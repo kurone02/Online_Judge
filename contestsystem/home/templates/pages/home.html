@@ -1,0 +1,12 @@
+{% extends 'pages/base.html' %}
+
+{% block title %}
+    Home
+{% endblock title %}
+{% block content %}
+    {% for announce in Announcements %}
+        <h3>{{announce.title}}</h3>
+        <h6>posted on {{announce.date}}</h6>
+        <p>{{announce.body|safe|linebreaks}}</p>
+    {% endfor %}
+{% endblock content %}
