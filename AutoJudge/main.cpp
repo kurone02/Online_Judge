@@ -89,6 +89,7 @@ public:
         //Ref = http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/createprocess.asp
         bool ok = CreateProcess(my_appName, my_lpCmd, my_lpProcessAttributes, my_lpThreadAttributes, my_inheritHandles,
                                 my_creationFlag, my_lpEnvironment, my_directory, &my_startupInfo, &my_processInfo);
+        if(!ok) return UNEXPECTED;
         int beginTime = clock();
         int endTime = beginTime + timeLimit;
         DWORD exitCode;
