@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1590081074 source:d:\server\django\autojudge\main.cpp
+	<iostream>
+	<string>
+	<time.h>
+	<windows.h>
+	<psapi.h>
+	<tchar.h>
+
