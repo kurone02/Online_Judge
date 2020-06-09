@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <dirent.h>
 #include <time.h>
 #include <windows.h>
 #include <psapi.h>
@@ -48,7 +50,7 @@ public:
         exitcode = NORMAL;
     }
 
-    int runExe(){
+    int runExe(const string &inputFile, const string &outputFile){
         char* my_appName = NULL;
         char * my_lpCmd = new char[problemName.size() + 1];
         copy(problemName.begin(), problemName.end(), my_lpCmd);
@@ -68,14 +70,14 @@ public:
         STARTUPINFOA my_startupInfo;
         ZeroMemory(&my_startupInfo, sizeof(STARTUPINFOA));
         my_startupInfo.cb = sizeof(STARTUPINFOA);
-        my_startupInfo.hStdInput = CreateFile(_T("input01.txt"),
-                                              FILE_READ_DATA,
-                                              FILE_SHARE_READ,
+        my_startupInfo.hStdInput = CreateFile(_T(inputFile.c_str()),
+                                              GENERIC_READ,
+                                              0,
                                               &secureA,
-                                              OPEN_ALWAYS,
-                                              FILE_ATTRIBUTE_NORMAL,
+                                              OPEN_EXISTING,
+                                              FILE_ATTRIBUTE_READONLY,
                                               NULL );
-        my_startupInfo.hStdOutput = CreateFile(_T("output01.txt"),
+        my_startupInfo.hStdOutput = CreateFile(_T(outputFile.c_str()),
                                               FILE_WRITE_DATA,
                                               FILE_SHARE_WRITE,
                                               &secureA,
@@ -100,7 +102,6 @@ public:
             GetProcessMemoryInfo(my_processInfo.hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
             SIZE_T curMem = pmc.WorkingSetSize;
             memoryUsed = max(memoryLimit, (long long)curMem / 1024);
-            cout << curMem << '\n';
             if(memoryUsed / 1024 >= memoryLimit){
                 bool terminate = TerminateProcess(my_processInfo.hProcess, 0);
                 return MLE; //Memory limit exceed!
@@ -112,16 +113,20 @@ public:
     }
 };
 
-int main(){
-    Judge judger("Untitled-1.exe", "", "", 1000, 1024);
-    int exitcode = judger.runExe();
-    if(exitcode == TLE){
-        cout << "Time limit exceeded!\n";
-    } else if(exitcode == MLE){
-        cout << "Memory limit exceeded!\n";
-    } else if(exitcode == NORMAL){
-        cout << "Run successfully!\n";
-    } else{
-        cout <<"Non zero exit code: " << exitcode << '\n';
+inline int convertToInt(const string &str){
+    stringstream ss;
+    ss << str;
+    int res; ss >> res;
+    return res;
+}
+
+int main(int argc, char *argv[]){
+    if(argc < 2){
+        cout << "More agruments are expected!\n";
+        return UNEXPECTED;
     }
+    Judge judger(argv[1], "", "", convertToInt(argv[2]), convertToInt(argv[3]));
+    chdir(argv[6]);
+    int exitcode = judger.runExe(argv[4], argv[5]);
+    return exitcode;
 }

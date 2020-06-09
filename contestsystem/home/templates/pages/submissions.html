@@ -4,5 +4,15 @@
     Problems
 {% endblock title %}
 {% block content %}
-    <center><h3>Contest has not started yet!</h3></center>
+    {% if user.username %}
+        <center><h3>YOUR SUBMISSIONS</h3></center>
+        {% for submission in Submissions %}
+            <h3>{{submission.id}}</h3>
+            <h6>posted on {{submission.date}}</h6>
+            <pre>{{submission.source_code|safe}}</pre>
+        {% endfor %}
+    {% else %}
+        <center><h3>YOU ARE NOT LOGGED IN!</h3></center>           
+    {% endif %}
+    
 {% endblock content %}

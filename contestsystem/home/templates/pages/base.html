@@ -10,6 +10,31 @@
             height: 100%;
             background-color: #f6f6f6;
         }
+
+        .inputfile {
+            width: 100%;
+            //height: 100px;
+            opacity: 1;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .inputfile + label {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: black;
+            border: 1px solid #999;
+            border-radius: 3px;padding: 5px 8px;
+            //background-color: darkblue;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .inputfile:focus + label,
+        .inputfile + label:hover {
+            //background-color: blue;
+        }
     </style>
     <title>{% block title %}{% endblock title %}</title>
 </head>

@@ -21,16 +21,47 @@
 
 {% block problemDetails %}
     {% if req_problem %}
-        <strong>Problem code: </strong> {{req_problem.title}} <br>
-        <strong>Time limit: </strong> {{req_problem.time_limit}} ms <br>
-        <strong>Memory limit: </strong> {{req_problem.memory_limit}} MiB <br>
-        <strong>Download: </strong> <a href = "{{req_problem.statements.url}}"> Statement </a> <br>
+        <div style = "border: 1px solid #999;border-radius: 3px;padding: 5px 8px;">
+            <strong>Problem code: </strong> {{req_problem.title}} <br>
+            <strong>Time limit: </strong> {{req_problem.time_limit}} ms <br>
+            <strong>Memory limit: </strong> {{req_problem.memory_limit}} MiB <br>
+            <strong>Download: </strong> <a href = "{{req_problem.statements.url}}"> Statement </a>
+        </div>
         <br> <br> 
         <strong>Submit solution: </strong>
-        <form method="post" enctype="multipart/form-data">
+        <script>
+            var inputs = document.querySelectorAll( '.inputfile' );
+            Array.prototype.forEach.call( inputs, function( input )
+            {
+                var label	 = input.nextElementSibling,
+                    labelVal = label.innerHTML;
+
+                input.addEventListener( 'change', function( e )
+                {
+                    var fileName = '';
+                    if( this.files && this.files.length > 1 )
+                        fileName = ( this.getAttribute( 'data-multiple-caption' ) || '' ).replace( '{count}', this.files.length );
+                    else
+                        fileName = e.target.value.split( '\\' ).pop();
+
+                    if( fileName )
+                        label.querySelector( 'span' ).innerHTML = fileName;
+                    else
+                        label.innerHTML = labelVal;
+                });
+            });
+        </script>
+        <form method = "POST" enctype = "multipart/form-data">
             {% csrf_token %}
-            <input type="file" name="myfile">
-            <button type="submit">Upload</button>
+            
+            <input type = "file" name = "submission" class = "inputfile"/>
+            <center><button type = "submit">Submit</button></center>
+            
+            <!--<center>
+                <input type="file" name="submission" id="file" class="inputfile" data-multiple-caption="{count} files selected" multiple />
+                <label for="file" class = "span">Choose a file</label>
+                <button type = "submit">Submit</button>
+            </center>-->
         </form>
     {% endif %}
 {% endblock problemDetails %}

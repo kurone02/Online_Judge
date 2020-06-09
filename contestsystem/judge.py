@@ -1,68 +1,106 @@
-import sys
-import warnings
-import subprocess
+import time, os
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
-import winerror
-import win32api
-import win32job
-import win32process
+class MyHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        import os, time, sys, glob
+        import subprocess as proc
+        from termcolor import colored
+        from contest.models import Problems as problemData
+        from contest.models import Submission as submissionData
 
-g_hjob = None
+        #define macro
+        maximal = 2**32
+        NORMAL = 0
+        UNEXPECTED = maximal - 1
+        TLE = maximal - 2
+        MLE = maximal - 3
+        currentDir = os.getcwd()
+        specialChar = '\\'
+        endl = '\n'
+        newSubmission = submissionData()
+        newSubmission.log = str()
+        sourceCode = open(event.src_path)
+        newSubmission.source_code = sourceCode.read()
 
-def create_job(job_name='', breakaway='silent'):
-    hjob = win32job.CreateJobObject(None, job_name)
-    if breakaway:
-        info = win32job.QueryInformationJobObject(hjob,
-                    win32job.JobObjectExtendedLimitInformation)
-        if breakaway == 'silent':
-            info['BasicLimitInformation']['LimitFlags'] |= (
-                win32job.JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK)
+        print("Created!")
+        os.system('cmd /c "mkdir workspace"')
+        exitcode = os.system(f'cmd /c "g++ -std=c++14 \"{event.src_path}\" -pipe -O2 -s -static -lm -Wl,--stack,66060288 -o \"workspace/prog.exe\" "')
+        tokens = event.src_path.split('_')
+        problemName = tokens[3]
+        newSubmission.user = tokens[2]
+        newSubmission.problem = problemName
+        newSubmission.language = "C++"
+        testcasesPath = f"testcase/{problemName}"
+        problem = problemData.objects.get(title = problemName)
+        maxScore = problem.max_score
+        if exitcode != 0:
+            print(colored("Compile Error!", "red"))
+            newSubmission.log += "Compile Error!\n"
         else:
-            info['BasicLimitInformation']['LimitFlags'] |= (
-                win32job.JOB_OBJECT_LIMIT_BREAKAWAY_OK)
-        win32job.SetInformationJobObject(hjob,
-            win32job.JobObjectExtendedLimitInformation, info)
-    return hjob
+            print(colored("Compilation Success!", "green"))
+            newSubmission.log += "Compilation Success!\n"
+            inputFiles = sorted(glob.glob(f"{testcasesPath}/*.inp"))
+            acceptedTestcases = 0
+            for inputFile in inputFiles:
+                testName = ''.join((''.join((''.join(inputFile.split('.')[:-1])).split('/')[-1])).split('\\')[-1])
+                #print(testName)
+                os.system(f'''cmd /c "copy {inputFile.replace('/', specialChar)} workspace > nul"''')
+                exitcode = proc.call(f"AutoJudge.exe workspace/prog.exe {problem.time_limit} {problem.memory_limit} {testName}.inp {testName}.out workspace")
+                #print(f"copy {inputFile.replace('/', specialChar)} workspace > nul")
+                if exitcode == NORMAL:
+                    os.system(f''' cmd /c "copy {testcasesPath.replace('/', specialChar)}{specialChar}{testName}.ans workspace > nul"''')
+                    verdict = proc.call(f"wcmp.exe workspace/{inputFile} workspace/{testName}.out workspace/{testName}.ans")
+                    if verdict == 0:
+                        print(colored(f"Test {testName}: accepted", "green"))
+                        newSubmission.log += f"Test {testName}: accepted{endl}"
+                    elif verdict == 1:
+                        print(colored(f"Test {testName}: wrong answer", "red"))
+                        newSubmission.log += f"Test {testName}: wrong answer{endl}"
+                    elif verdict == 2:
+                        print(colored(f"Test {testName}: fail", "red"))
+                        newSubmission.log += f"Test {testName}: fail{endl}"
+                    else:
+                        print(colored(f"Test {testName}: something is wrong?", "red"))
+                        newSubmission.log += f"Test {testName}: something is wrong?{endl}"
+                    acceptedTestcases += 1
+                elif exitcode == UNEXPECTED:
+                    print(colored(f"Test {testName}: unexpected error", "red"))
+                    newSubmission.log += f"Test {testName}: unexpected error{endl}"
+                elif exitcode == TLE:
+                    print(colored(f"Test {testName}: time limit exceeded", "yellow"))
+                    newSubmission.log += f"Test {testName}: time limit exceeded{endl}"
+                elif exitcode == MLE:
+                    print(colored(f"Test {testName}: memory limit exceeded", "yellow"))
+                    newSubmission.log += f"Test {testName}: memory limit exceeded{endl}"
+                else:
+                    print(colored(f"Test {testName}: non-zero exit code", "red"))
+                    newSubmission.log += f"Test {testName}: non-zero exit code{endl}"
+                os.system(f'''cmd /c "del workspace{specialChar}{testName}.inp > nul"''')
+                os.system(f'''cmd /c "del workspace{specialChar}{testName}.out > nul"''')
+                os.system(f'''cmd /c "del workspace{specialChar}{testName}.ans > nul"''')
+            print(f"The number of accepted test cases: {acceptedTestcases}")
+            newSubmission.log += f"The number of accepted test cases: {acceptedTestcases}{endl}"
+            finalScore = maxScore / len(inputFiles) * acceptedTestcases
+            print(f"Verdict: {finalScore}")
+            newSubmission.verdict = finalScore
+            newSubmission.log += f"Verdict: {finalScore}"
+        
+        newSubmission.save()
+        print("Deleted!")
+        os.system('cmd /c "rmdir /s /q workspace"')
 
-def assign_job(hjob):
-    global g_hjob
-    hprocess = win32api.GetCurrentProcess()
-    try:
-        win32job.AssignProcessToJobObject(hjob, hprocess)
-        g_hjob = hjob
-    except win32job.error as e:
-        if (e.winerror != winerror.ERROR_ACCESS_DENIED or
-            sys.getwindowsversion() >= (6, 2) or
-            not win32job.IsProcessInJob(hprocess, None)):
-            raise
-        warnings.warn('The process is already in a job. Nested jobs are not '
-            'supported prior to Windows 8.')
 
-def limit_memory(memory_limit):
-    if g_hjob is None:
-        return
-    info = win32job.QueryInformationJobObject(g_hjob,
-                win32job.JobObjectExtendedLimitInformation)
-    info['ProcessMemoryLimit'] = memory_limit
-    info['BasicLimitInformation']['LimitFlags'] |= (
-        win32job.JOB_OBJECT_LIMIT_PROCESS_MEMORY)
-    win32job.SetInformationJobObject(g_hjob,
-        win32job.JobObjectExtendedLimitInformation, info)
+event_handler = MyHandler()
+observer = Observer()
+observer.schedule(event_handler, path = 'media/contestant_solutions', recursive = False)
+observer.start()
 
-def main():
-    assign_job(create_job())
-    memory_limit = 100 * 1024 * 1024 # 100 MiB
-    limit_memory(memory_limit)
-    try:
-        bytearray(memory_limit)
-    except MemoryError:
-        print('Success: available memory is limited.')
-    else:
-        print('Failure: available memory is not limited.')
-    return 0
-
-if __name__ == '__main__':
-    #sys.exit(main())
-    child = subprocess.Popen("Untitled-1.exe")
-    child.communicate()
-    print(child.returncode, "loz")
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    observer.stop()
+observer.join()
+    
